@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pong Multijugador</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Pantalla de Autenticación -->
+    <div id="auth-screen" class="screen">
+        <div class="auth-container">
+            <div class="logo">
+                <i class="fas fa-table-tennis-paddle-ball"></i>
+                <h1>PONG MULTIJUGADOR</h1>
+            </div>
+            
+            <div class="auth-form">
+                <div id="login-form" class="form active">
+                    <h2>Iniciar Sesión</h2>
+                    <div class="input-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="login-username" placeholder="Usuario">
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="login-password" placeholder="Contraseña">
+                    </div>
+                    <button id="login-btn" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Entrar
+                    </button>
+                    <p class="switch-form">
+                        ¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a>
+                    </p>
+                </div>
+                
+                <div id="register-form" class="form">
+                    <h2>Registro</h2>
+                    <div class="input-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="register-username" placeholder="Usuario">
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="register-password" placeholder="Contraseña">
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="register-confirm" placeholder="Confirmar contraseña">
+                    </div>
+                    <button id="register-btn" class="btn btn-success">
+                        <i class="fas fa-user-plus"></i> Crear Cuenta
+                    </button>
+                    <p class="switch-form">
+                        ¿Ya tienes cuenta? <a href="#" id="show-login">Inicia Sesión</a>
+                    </p>
+                </div>
+            </div>
+            
+            <div class="quick-play">
+                <button id="guest-play" class="btn btn-secondary">
+                    <i class="fas fa-play-circle"></i> Jugar como Invitado
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla Principal del Juego -->
+    <div id="game-screen" class="screen hidden">
+        <div class="game-header">
+            <div class="player-info">
+                <div id="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="username-display">Invitado</span>
+                </div>
+                <button id="achievements-btn" class="btn-icon" title="Logros">
+                    <i class="fas fa-trophy"></i>
+                </button>
+                <button id="logout-btn" class="btn-icon" title="Salir">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+            
+            <div class="game-modes">
+                <button id="single-player-btn" class="mode-btn active">
+                    <i class="fas fa-robot"></i> Un Jugador
+                </button>
+                <button id="multiplayer-btn" class="mode-btn">
+                    <i class="fas fa-users"></i> Multijugador
+                </button>
+                <button id="local-multiplayer-btn" class="mode-btn">
+                    <i class="fas fa-gamepad"></i> Local
+                </button>
+            </div>
+            
+            <div class="difficulty-selector">
+                <span>Dificultad:</span>
+                <select id="difficulty-select">
+                    <option value="easy">Fácil</option>
+                    <option value="medium" selected>Media</option>
+                    <option value="hard">Difícil</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Área del Juego -->
+        <div class="game-area">
+            <canvas id="pongCanvas"></canvas>
+            
+            <!-- Controles Táctiles (solo móviles) -->
+            <div id="touch-controls" class="touch-controls">
+                <div class="touch-area left-area">
+                    <div class="touch-indicator">
+                        <i class="fas fa-arrow-up"></i>
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+                <div class="touch-area right-area">
+                    <div class="touch-indicator">
+                        <i class="fas fa-arrow-up"></i>
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Marcador y Controles -->
+        <div class="game-controls">
+            <div class="score-board">
+                <div class="score player-score">
+                    <span class="score-label">JUGADOR</span>
+                    <span id="player-score" class="score-value">0</span>
+                </div>
+                <div class="score-divider">:</div>
+                <div class="score opponent-score">
+                    <span class="score-label">OPONENTE</span>
+                    <span id="opponent-score" class="score-value">0</span>
+                </div>
+            </div>
+            
+            <div class="control-buttons">
+                <button id="start-btn" class="btn btn-success">
+                    <i class="fas fa-play"></i> Iniciar
+                </button>
+                <button id="pause-btn" class="btn btn-warning">
+                    <i class="fas fa-pause"></i> Pausa
+                </button>
+                <button id="reset-btn" class="btn btn-danger">
+                    <i class="fas fa-redo"></i> Reiniciar
+                </button>
+            </div>
+        </div>
+
+        <!-- Estado del Juego -->
+        <div id="game-status" class="game-status">
+            <div id="waiting-opponent" class="status-message hidden">
+                <i class="fas fa-spinner fa-spin"></i> Esperando oponente...
+            </div>
+            <div id="game-paused" class="status-message hidden">
+                <i class="fas fa-pause"></i> JUEGO EN PAUSA
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Logros -->
+    <div id="achievements-panel" class="panel hidden">
+        <div class="panel-header">
+            <h2><i class="fas fa-trophy"></i> Tus Logros</h2>
+            <button id="close-achievements" class="btn-icon">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="panel-content">
+            <div class="stats-summary">
+                <div class="stat">
+                    <i class="fas fa-gamepad"></i>
+                    <span>Partidas: <strong id="games-played">0</strong></span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-crown"></i>
+                    <span>Victorias: <strong id="games-won">0</strong></span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-star"></i>
+                    <span>Puntos: <strong id="achievement-points">0</strong></span>
+                </div>
+            </div>
+            
+            <div class="achievements-list" id="achievements-list">
+                <!-- Los logros se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="notification-area"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
